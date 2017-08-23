@@ -16,7 +16,7 @@ NAGIOS_RESTART_CMD = 'service nagios restart'
 
 Install dependencies `pip install -r requirements.txt`
 
-Then `python generate-nagios-conf-for-aws-instances.py`.
+Then `python generate-nagios-conf-for-aws-instances.py`
 
 ### How it works
 
