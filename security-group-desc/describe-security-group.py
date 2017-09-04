@@ -5,8 +5,15 @@ import sys
 
 # aws region
 REGION = 'eu-west-2'
+
 # only describe rules of these types
 FILTER = ['tcp', 'udp']
+
+# only output the first word of the description to keep it short
+# the idea is, for example, if the port is 3306, the description might be like MySQL of xxx xxx
+# so most of the time the first word is enough to describe it.
+# default True. disable it if you want full description
+USE_SHORT_DESCRIPTION = True
 
 
 # exit code explanation:
@@ -59,6 +66,9 @@ def parse_response(response):
                     for userid_group_pair in userid_group_pairs:
                         if 'Description' in userid_group_pair:
                             description = userid_group_pair['Description']
+
+                if USE_SHORT_DESCRIPTION:
+                    description = description.split(' ')[0]
 
                 res.append([port, protocol, description])
     return res
