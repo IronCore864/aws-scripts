@@ -16,7 +16,7 @@ NAGIOS_CFG_TEMPLATE = 'example_host.cfg.j2'
 NAGIOS_VALIDATE_CMD = '/usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nagios.cfg'
 # nagios restart cmd
 NAGIOS_RESTART_CMD = 'service nagios restart'
-
+USE = 'linux'
 
 def get_ec2_instances(region):
     """
@@ -110,7 +110,8 @@ def render(instances):
             f.write(
                 j2_env.get_template(NAGIOS_CFG_TEMPLATE).render(
                     HOSTNAME=inst[1],
-                    IP=inst[2]
+                    IP=inst[2],
+                    USE=USE
                 )
             )
 
@@ -133,4 +134,6 @@ if __name__ == "__main__":
     render(instances)
     if validate() == 0:
         print("Nagios cfg is valid!")
-        reboot()
+        # reboot()
+    exit(0)
+

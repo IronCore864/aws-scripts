@@ -16,7 +16,7 @@ NAGIOS_RESTART_CMD = 'service nagios restart'
 
 Install dependencies `pip install -r requirements.txt`
 
-Then `python generate-nagios-conf-for-aws-instances.py`
+Then `python generate-nagios-conf-for-ec2.py`
 
 ### How it works
 
@@ -33,4 +33,5 @@ boto, jinja2
 ### Release Note
 
 v0.1    20170823    First edition.
+v0.2    20170908    Second edition. Rename, update template, remove reboot nagios.
 
