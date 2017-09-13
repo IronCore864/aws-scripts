@@ -14,6 +14,17 @@ NAGIOS_CFG_DIR = '/usr/local/nagios/etc/cfgs/hosts'
 NAGIOS_CFG_TEMPLATE = 'example_host.cfg.j2'
 # nagios cfg validation cmd
 NAGIOS_VALIDATE_CMD = '/usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nagios.cfg'
+# ignore instances that has 'test' in its name tag. default true.
+# useful when someone else in your team wants to create an instance for test, whose name probably contains 'test', like
+# haproxy-test, and you don't want to add it into nagios because it will probably be used only for a couple of days or even hours.
+# if you want to include everything, just change it to False
+IGNORE_TEST_INSTANCE = True
+# ignore instances with a tag 'Nagios' = 'ignore'. default true.
+# when set to true, ignore instances with a tag 'Nagios' of the value 'ignore'
+# useful when you have certain instances that you don't want to include in nagios.
+# if you want to include everything, just change it to False, or don't create this 'Nagios' tag at all.
+IGNORE_NAGIOS_TAG_INSTANCE = True
+
 USE = 'linux'
 
 
@@ -56,10 +67,15 @@ def get_ec2_instances(region):
 
     for res in reservations:
         for inst in res.instances:
-            # key 'Nagios' value 'ignore' means do not add it into nagios
+
+            # ignore terminated instances
             if inst.state == 'terminated':
                 continue
-            if 'Nagios' in inst.tags and inst.tags['Nagios'] == 'ignore':
+            # key 'Nagios' value 'ignore' means do not add it into nagios
+            if IGNORE_NAGIOS_TAG_INSTANCE and 'Nagios' in inst.tags and inst.tags['Nagios'] == 'ignore':
+                continue
+            # ignore instances that has 'test' as part of its name tag
+            if IGNORE_TEST_INSTANCE and 'Name' in inst.tags and 'test' in inst.tags['Name'].lower():
                 continue
 
             name = inst.tags['Name'] + CONCAT_CHAR + inst.id if 'Name' in inst.tags else inst.id
@@ -67,6 +83,7 @@ def get_ec2_instances(region):
             name = re.sub(r"[\(\)]", "", name)
             name = re.sub(r"[^-_a-zA-Z0-9]", CONCAT_CHAR, name)
             instances_dict[name].append([inst.id, inst.private_ip_address])
+
     ####
     # Solve duplicate instance names
     # The idea is adding the last section of IP as part of the name, if the name is duplicated.
