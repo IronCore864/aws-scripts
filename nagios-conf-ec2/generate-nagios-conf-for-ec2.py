@@ -14,9 +14,8 @@ NAGIOS_CFG_DIR = '/usr/local/nagios/etc/cfgs/hosts'
 NAGIOS_CFG_TEMPLATE = 'example_host.cfg.j2'
 # nagios cfg validation cmd
 NAGIOS_VALIDATE_CMD = '/usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nagios.cfg'
-# nagios restart cmd
-NAGIOS_RESTART_CMD = 'service nagios restart'
 USE = 'linux'
+
 
 def get_ec2_instances(region):
     """
@@ -58,6 +57,8 @@ def get_ec2_instances(region):
     for res in reservations:
         for inst in res.instances:
             # key 'Nagios' value 'ignore' means do not add it into nagios
+            if inst.state == 'terminated':
+                continue
             if 'Nagios' in inst.tags and inst.tags['Nagios'] == 'ignore':
                 continue
 
@@ -66,7 +67,6 @@ def get_ec2_instances(region):
             name = re.sub(r"[\(\)]", "", name)
             name = re.sub(r"[^-_a-zA-Z0-9]", CONCAT_CHAR, name)
             instances_dict[name].append([inst.id, inst.private_ip_address])
-
     ####
     # Solve duplicate instance names
     # The idea is adding the last section of IP as part of the name, if the name is duplicated.
@@ -122,18 +122,10 @@ def validate():
     return process.returncode
 
 
-def reboot():
-    process = subprocess.Popen(NAGIOS_RESTART_CMD, shell=True, stdout=subprocess.PIPE)
-    process.wait()
-    return process.returncode
-
-
 if __name__ == "__main__":
     instances = get_ec2_instances(REGION)
     purge(NAGIOS_CFG_DIR, "^i-.*\.cfg$")
     render(instances)
     if validate() == 0:
-        print("Nagios cfg is valid!")
-        # reboot()
+        print("Nagios config files generated and are valid!")
     exit(0)
-
