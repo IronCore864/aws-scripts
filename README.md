@@ -6,4 +6,6 @@
 
 `security-group-desc`: describe a security group, to see each port is used for what reason
 
+`migrate-security-gruops`: migrate Security Groups from One Region to Another
+
 For more details see readme under each folder.
