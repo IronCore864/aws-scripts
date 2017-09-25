@@ -4,7 +4,7 @@
 
 OK you are using amazon ec2.
 
-In order to separate dev/staging/prod environments, you use different regions(or different vpcs inside the same region) for different purpose, say, eu-west-2(london) for dev, eu-west-1(ireland) for staging.
+In order to separate dev/staging/prod environments, you use different regions(or different vpcs inside the same region) for different purpose, say, eu-west-2(london) for dev, eu-west-1(ireland) for staging (or different vpc inside the same region).
 
 After you went all the troubles to manually set up all the security groups, names, tags, rules, ip ranges, etc, you tested them, fixed issues, finally you want to move on to staging environment.
 
