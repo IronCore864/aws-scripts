@@ -8,7 +8,7 @@ ORIGIN_REGION = 'eu-west-2'
 ORIGIN_VPC_ID = 'vpc-f21cc59b'
 
 DESTINATION_REGION = 'eu-west-1'
-DESTINATION_VPC_ID = 'vpc-e19eed86'
+DESTINATION_VPC_ID = 'vpc-79e19c1e'
 
 # if enabled, during the migration the name of the security groups are changed.
 # for example, origin group name is ldn-test-1, destination prefix is 'irl'
@@ -23,15 +23,6 @@ DESTINATION_SECURITY_GROUP_NAME_PREFIX = 'dub'
 REPLACE_IP_ADDRESS = True
 ORIGIN_IP = "10.100"
 DESTINATION_IP = "10.102"
-
-AWS_DEFAULT_ALLOW_ALL_OUTBOUND_RULE = [
-    {
-        "IpProtocol": "-1",
-        "PrefixListIds": [],
-        "IpRanges": [{"CidrIp": "0.0.0.0/0"}],
-        "UserIdGroupPairs": [],
-        "Ipv6Ranges": []
-    }]
 
 logging.basicConfig(level=logging.INFO)
 
@@ -63,6 +54,11 @@ def _get_all_security_groups(region, vpc_id):
         exit(3)
     return response['SecurityGroups']
 
+def _remove_default_existing_rules(sg):
+    if sg.ip_permissions:
+        sg.revoke_ingress(IpPermissions=sg.ip_permissions)
+    if sg.ip_permissions_egress:
+        sg.revoke_egress(IpPermissions=sg.ip_permissions_egress)
 
 def _create_security_groups(security_groups, region, vpc_id):
     """
@@ -92,11 +88,13 @@ def _create_security_groups(security_groups, region, vpc_id):
             sleep(1)
             logging.info("{} {} is created!".format(dsg.group_name, dsg.group_id))
             sg_name_id_dict[osg['GroupName']] = dsg.group_id
-            logging.info("Revoking default outbound rule for {}:".format(osg['GroupName']))
-            dsg.revoke_egress(IpPermissions=AWS_DEFAULT_ALLOW_ALL_OUTBOUND_RULE)
+            logging.info("Revoking default rules for newly created group {}:".format(osg['GroupName']))
+            _remove_default_existing_rules(dsg)
         else:
             dsg = ec2.SecurityGroup(sg_name_id_dict[osg['GroupName']])
             logging.info("Security group {} already exists, id {}".format(dsg.group_name, dsg.group_id))
+            logging.info("Removing existing inbound/outbound rules for existing group...")
+            _remove_default_existing_rules(dsg)
         dsg.create_tags(Tags=osg['Tags'])
     return sg_name_id_dict
 
