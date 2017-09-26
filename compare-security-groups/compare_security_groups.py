@@ -153,6 +153,9 @@ def _compare_rule(sgs_a, sgs_b, region_a, vpc_a, region_b, vpc_b):
         name_rules_dict_b[sg['GroupName']] = {'Ingress': sg['IpPermissions'], 'Egress': sg['IpPermissionsEgress']}
     res = True
     for sg_a, rules_a in name_rules_dict_a.iteritems():
+        if sg_a not in name_rules_dict_b:
+            # ignore non-existing groups
+            continue
         rules_b = name_rules_dict_b[sg_a]
         if rules_a['Ingress'] != rules_b['Ingress']:
             res = False
