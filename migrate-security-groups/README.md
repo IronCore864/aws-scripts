@@ -60,4 +60,5 @@ boto3
 ### Release Note
 
 v0.1    20170922    First edition.
+
 v0.2    20171013    Add argparse and help.
