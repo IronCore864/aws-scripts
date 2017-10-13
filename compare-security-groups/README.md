@@ -8,9 +8,11 @@ After you migrate your security groups from one region/VPC to another using `mig
 
 Install boto3 if you haven't done so: `pip install -r requirements.txt`
 
-Update global vars as needed. Quite straightforward so no example here.
+Then `python compare_security_groups.py -h` to see usage.
 
-Then `python compare_security_groups.py`
+Example:
+
+`python compare_security_groups.py --from-region eu-west-2 --from-vpc vpc-f21cc59b --replace-ip-prefix --from-ip-prefix 10.100. --replace-sg-prefix --from-sg-prefix ldn --to-region eu-west-1 --to-vpc vpc-81044be6 --to-ip-prefix 10.102. --to-sg-prefix dub`
 
 ### How it works
 
@@ -23,3 +25,4 @@ boto3
 ### Release Note
 
 v0.1    20170925    First edition.
+v0.2    20171013    Add argparse and help.

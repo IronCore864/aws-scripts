@@ -28,7 +28,11 @@ Install boto3 if you haven't done so: `pip install -r requirements.txt`
 
 Update global vars as needed. Quite straightforward so no example here.
 
-Then `python migrate_security_groups.py`
+Then `python migrate_security_groups.py -h` to see usage.
+
+Example:
+
+`python migrate_security_groups.py --from-region eu-west-2 --from-vpc vpc-f21cc59b --replace-ip-prefix --from-ip-prefix 10.100. --replace-sg-prefix --from-sg-prefix ldn --to-region eu-west-1 --to-vpc vpc-81044be6 --to-ip-prefix 10.102. --to-sg-prefix dub`
 
 If a security group already exists in the destination region, it won't be recreated. But if a rule is already in a group, it may throw an exception.
 
@@ -56,3 +60,4 @@ boto3
 ### Release Note
 
 v0.1    20170922    First edition.
+v0.2    20171013    Add argparse and help.

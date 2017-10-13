@@ -1,28 +1,9 @@
+import argparse
 import logging
 from time import sleep
 
 import boto3
 from botocore.exceptions import ClientError, EndpointConnectionError
-
-ORIGIN_REGION = 'eu-west-2'
-ORIGIN_VPC_ID = 'vpc-f21cc59b'
-
-DESTINATION_REGION = 'eu-west-1'
-DESTINATION_VPC_ID = 'vpc-79e19c1e'
-
-# if enabled, during the migration the name of the security groups are changed.
-# for example, origin group name is ldn-test-1, destination prefix is 'irl'
-# the new name will be 'irl-test-1'
-REPLACE_SECURITY_GROUP_NAME_PREFIX = True
-ORIGIN_SECURIGY_GROUP_NAME_PREFIX = 'ldn'
-DESTINATION_SECURITY_GROUP_NAME_PREFIX = 'dub'
-
-# if enabled, the ip addresses in the rules in the security groups will be updated
-# for example, in origin region all your instances have IP like 10.100.*.*
-# but in the destination region you want use 10.101.*.* to separate, this feature is useful
-REPLACE_IP_ADDRESS = True
-ORIGIN_IP = "10.100"
-DESTINATION_IP = "10.102"
 
 logging.basicConfig(level=logging.INFO)
 
@@ -30,6 +11,45 @@ logging.basicConfig(level=logging.INFO)
 # exit code explanation:
 # 2: security group not found
 # 3: endpoint connection error
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='AWS security groups migration.')
+    parser.add_argument('--from-region',
+                        required=True,
+                        help='source region')
+    parser.add_argument('--from-vpc',
+                        required=True,
+                        help='source region')
+    parser.add_argument('--from-ip-prefix',
+                        help='source region/vpc ip address prefix')
+    parser.add_argument('--from-sg-prefix',
+                        help='source region/vpc group name prefix')
+    parser.add_argument('--to-region',
+                        required=True,
+                        help='destination region')
+    parser.add_argument('--to-vpc',
+                        required=True,
+                        help='destination region')
+    parser.add_argument('--to-ip-prefix',
+                        help='destination region/vpc ip address prefix')
+    parser.add_argument('--to-sg-prefix',
+                        help='destination region/vpc group name prefix')
+    parser.add_argument('--replace-sg-prefix',
+                        action='store_true',
+                        help='If enabled, during the migration the name of the security groups are changed. '
+                             'Always used together with --from-name-prefix and --to-name-prefix. '
+                             'For example, origin group name is ldn-test-1, destination prefix is irl, '
+                             'the new name will be irl-test-1')
+    parser.add_argument('--replace-ip-prefix',
+                        action='store_true',
+                        help='If enabled, the ip addresses in the rules in the security groups will be updated. '
+                             'Always used together with --from-ip-prefix and --to-ip-prefix. '
+                             'For example, in origin region all your instances have IP like 10.100.*.* '
+                             'but in the destination region you want use 10.101.*.* to separate, this feature is useful. '
+                             'Make sure you include the last dot in the ip prefix because if not, '
+                             'the prefix 10.10 may match 10.102.1.1 which is not what you may want.')
+    return parser.parse_args()
+
 
 def _get_all_security_groups(region, vpc_id):
     """
@@ -54,11 +74,13 @@ def _get_all_security_groups(region, vpc_id):
         exit(3)
     return response['SecurityGroups']
 
+
 def _remove_default_existing_rules(sg):
     if sg.ip_permissions:
         sg.revoke_ingress(IpPermissions=sg.ip_permissions)
     if sg.ip_permissions_egress:
         sg.revoke_egress(IpPermissions=sg.ip_permissions_egress)
+
 
 def _create_security_groups(security_groups, region, vpc_id):
     """
@@ -156,13 +178,13 @@ def _set_ingress_egress_rules(origin_security_groups, dest_sg_name_id_dict, regi
 
 def _replace_security_group_name_prefix(security_groups):
     for i in range(len(security_groups)):
-        if security_groups[i]['GroupName'].startswith(ORIGIN_SECURIGY_GROUP_NAME_PREFIX):
+        if security_groups[i]['GroupName'].startswith(ORIGIN_SECURITY_GROUP_NAME_PREFIX):
             security_groups[i]['GroupName'] = DESTINATION_SECURITY_GROUP_NAME_PREFIX + \
-                                              security_groups[i]['GroupName'][len(ORIGIN_SECURIGY_GROUP_NAME_PREFIX):]
+                                              security_groups[i]['GroupName'][len(ORIGIN_SECURITY_GROUP_NAME_PREFIX):]
         for tag in security_groups[i]['Tags']:
-            if tag['Key'] == 'Name' and tag['Value'].startswith(ORIGIN_SECURIGY_GROUP_NAME_PREFIX):
+            if tag['Key'] == 'Name' and tag['Value'].startswith(ORIGIN_SECURITY_GROUP_NAME_PREFIX):
                 tag['Value'] = DESTINATION_SECURITY_GROUP_NAME_PREFIX + \
-                               tag['Value'][len(ORIGIN_SECURIGY_GROUP_NAME_PREFIX):]
+                               tag['Value'][len(ORIGIN_SECURITY_GROUP_NAME_PREFIX):]
     return security_groups
 
 
@@ -194,4 +216,17 @@ def migrate_security_groups(origin_region, origin_vpc_id, destination_region, de
 
 
 if __name__ == "__main__":
+    args = parse_args()
+
+    ORIGIN_REGION = args.from_region
+    ORIGIN_VPC_ID = args.from_vpc
+    DESTINATION_REGION = args.to_region
+    DESTINATION_VPC_ID = args.to_vpc
+    ORIGIN_SECURITY_GROUP_NAME_PREFIX = args.from_sg_prefix
+    DESTINATION_SECURITY_GROUP_NAME_PREFIX = args.to_sg_prefix
+    ORIGIN_IP = args.from_ip_prefix
+    DESTINATION_IP = args.to_ip_prefix
+    REPLACE_SECURITY_GROUP_NAME_PREFIX = args.replace_sg_prefix
+    REPLACE_IP_ADDRESS = args.replace_ip_prefix
+
     migrate_security_groups(ORIGIN_REGION, ORIGIN_VPC_ID, DESTINATION_REGION, DESTINATION_VPC_ID)

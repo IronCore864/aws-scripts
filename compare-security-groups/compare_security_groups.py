@@ -1,3 +1,4 @@
+import argparse
 import logging
 
 import boto3
@@ -5,23 +6,51 @@ from botocore.exceptions import ClientError, EndpointConnectionError
 
 logging.basicConfig(level=logging.INFO)
 
-REGION_A = 'eu-west-2'
-VPC_A = 'vpc-f21cc59b'
-
-REGION_B = 'eu-west-1'
-VPC_B = 'vpc-79e19c1e'
-
-SECURITY_GROUP_NAME_PREFIX = True
-SG_NAME_PREFIX_A = 'ldn-'
-SG_NAME_PREFIX_B = 'dub-'
-
-IP_PREFIX_A = '10.100.'
-IP_PREFIX_B = '10.102.'
-
 
 # exit code explanation:
 # 2: security group not found
 # 3: endpoint connection error
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='AWS security groups comparison.')
+    parser.add_argument('--from-region',
+                        required=True,
+                        help='source region')
+    parser.add_argument('--from-vpc',
+                        required=True,
+                        help='source region')
+    parser.add_argument('--from-ip-prefix',
+                        help='source region/vpc ip address prefix')
+    parser.add_argument('--from-sg-prefix',
+                        help='source region/vpc group name prefix')
+    parser.add_argument('--to-region',
+                        required=True,
+                        help='destination region')
+    parser.add_argument('--to-vpc',
+                        required=True,
+                        help='destination region')
+    parser.add_argument('--to-ip-prefix',
+                        help='destination region/vpc ip address prefix')
+    parser.add_argument('--to-sg-prefix',
+                        help='destination region/vpc group name prefix')
+    parser.add_argument('--replace-sg-prefix',
+                        action='store_true',
+                        help='If enabled, it means there is a prefix in the security group name. '
+                             'Always used together with --from-sg-prefix and --to-sg-prefix. '
+                             'For example, origin group name is ldn-test-1, destination name irl-test-1, '
+                             'then the --from-sg-prefix would be ldn, and the --to-sg-prefix would be irl.')
+    parser.add_argument('--replace-ip-prefix',
+                        action='store_true',
+                        help='If enabled, it means the ip address prefixes are different between vpcs'
+                             '(normally it is the case). '
+                             'Always used together with --from-ip-prefix and --to-ip-prefix. '
+                             'For example, in origin region all your instances have IP like 10.100.*.*, '
+                             'and in destination region ip is like 10.102.*.*, '
+                             'the --from-ip-prefix would be 10.100. and --to-ip-prefix would be 10.102. '
+                             'Make sure you include the last dot in the ip prefix because if not, '
+                             'the prefix 10.10 may match 10.102.1.1 which is not what you may want.')
+    return parser.parse_args()
+
 
 def _get_all_security_groups(region, vpc_id):
     """
@@ -187,7 +216,8 @@ def compare_security_groups(region_a, vpc_a, region_b, vpc_b):
         _handle_name(sg_groups_b, SG_NAME_PREFIX_B)
     _handle_group_id(sg_groups_a), _handle_group_id(sg_groups_b)
     _handle_vpc_group_id(sg_groups_a), _handle_vpc_group_id(sg_groups_b)
-    _hanlde_ip(sg_groups_a, IP_PREFIX_A), _hanlde_ip(sg_groups_b, IP_PREFIX_B)
+    if IP_PREFIX:
+        _hanlde_ip(sg_groups_a, IP_PREFIX_A), _hanlde_ip(sg_groups_b, IP_PREFIX_B)
     _handle_rule_order(sg_groups_a)
     _handle_rule_order(sg_groups_b)
 
@@ -197,4 +227,16 @@ def compare_security_groups(region_a, vpc_a, region_b, vpc_b):
 
 
 if __name__ == "__main__":
+    args = parse_args()
+    REGION_A = args.from_region
+    VPC_A = args.from_vpc
+    REGION_B = args.to_region
+    VPC_B = args.to_vpc
+    SG_NAME_PREFIX_A = args.from_sg_prefix
+    SG_NAME_PREFIX_B = args.to_sg_prefix
+    IP_PREFIX_A = args.from_ip_prefix
+    IP_PREFIX_B = args.to_ip_prefix
+    SECURITY_GROUP_NAME_PREFIX = args.replace_sg_prefix
+    IP_PREFIX = args.replace_ip_prefix
+
     compare_security_groups(REGION_A, VPC_A, REGION_B, VPC_B)
