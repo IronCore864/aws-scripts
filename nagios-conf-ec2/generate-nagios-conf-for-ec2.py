@@ -1,11 +1,10 @@
+import argparse
 import os, re, subprocess
 from collections import defaultdict
 
 from boto import ec2
 from jinja2 import Environment, FileSystemLoader
 
-# aws region
-REGION = 'eu-west-2'
 # used to replace spaces, dot in name tags
 CONCAT_CHAR = '_'
 # nagios cfg dir
@@ -26,6 +25,14 @@ IGNORE_TEST_INSTANCE = True
 IGNORE_NAGIOS_TAG_INSTANCE = True
 
 USE = 'linux'
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Generate nagios configuration for aws ec2.')
+    parser.add_argument('-r', '--region',
+                        required=True,
+                        help='Region')
+    return parser.parse_args()
 
 
 def get_ec2_instances(region):
@@ -140,6 +147,9 @@ def validate():
 
 
 if __name__ == "__main__":
+    args = parse_args()
+    REGION = args.region
+
     instances = get_ec2_instances(REGION)
     purge(NAGIOS_CFG_DIR, "^i-.*\.cfg$")
     render(instances)

@@ -1,10 +1,9 @@
+import argparse
 import boto3
 from botocore.exceptions import ClientError
 import os, re, subprocess
 from jinja2 import Environment, FileSystemLoader
 
-# aws region
-REGION = 'eu-west-2'
 # nagios cfg dir
 NAGIOS_CFG_DIR = '/usr/local/nagios/etc/cfgs/hosts'
 # nagios cfg template filename
@@ -15,8 +14,16 @@ NAGIOS_VALIDATE_CMD = '/usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nag
 NAGIOS_RESTART_CMD = 'service nagios restart'
 
 
-def describe_db_instances():
-    ec2 = boto3.client('rds', region_name=REGION)
+def parse_args():
+    parser = argparse.ArgumentParser(description='Generate nagios configuration for aws rds.')
+    parser.add_argument('-r', '--region',
+                        required=True,
+                        help='Region')
+    return parser.parse_args()
+
+
+def describe_db_instances(region):
+    ec2 = boto3.client('rds', region_name=region)
     try:
         response = ec2.describe_db_instances()
     except ClientError as e:
@@ -88,8 +95,11 @@ def reboot():
 
 
 if __name__ == "__main__":
+    args = parse_args()
+    REGION = args.region
+
     # at least one parameter is needed which is the security group id, like sg-12345
-    response = describe_db_instances()
+    response = describe_db_instances(REGION)
     instances = parse_response(response)
     purge(NAGIOS_CFG_DIR, "^rds-.*\.cfg$")
     render(instances)
