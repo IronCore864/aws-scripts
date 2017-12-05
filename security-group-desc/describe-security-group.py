@@ -1,27 +1,34 @@
+import argparse
+
 import boto3
 from botocore.exceptions import ClientError
-
-import sys
-
-# aws region
-REGION = 'eu-west-2'
 
 # only describe rules of these types
 FILTER = ['tcp', 'udp']
 
-# only output the first word of the description to keep it short
-# the idea is, for example, if the port is 3306, the description might be like MySQL of xxx xxx
-# so most of the time the first word is enough to describe it.
-# default True. disable it if you want full description
-USE_SHORT_DESCRIPTION = True
-
 
 # exit code explanation:
-# 1: security group id not provided
-# 2: security group not found
+# 1: security group not found
 
-def describe_security_group(security_group_id):
-    ec2 = boto3.client('ec2', region_name=REGION)
+def parse_args():
+    parser = argparse.ArgumentParser(description='AWS security groups comparison.')
+    parser.add_argument('-r', '--region',
+                        required=True,
+                        help='Region')
+    parser.add_argument('-g', '--sg',
+                        required=True,
+                        help='Security group id you want to describe')
+    parser.add_argument('-f', '--full-desc',
+                        action='store_true',
+                        help='By default only output the first word of the description to keep it short'
+                             'The idea is, for example, if the port is 3306, the description might be like:'
+                             'MySQL of xxx xxx; so most of the time the first word is enough to describe it.'
+                             'if --full-desc is specified, the full description will be used instead')
+    return parser.parse_args()
+
+
+def describe_security_group(security_group_id, region):
+    ec2 = boto3.client('ec2', region_name=region)
     try:
         response = ec2.describe_security_groups(
             Filters=[
@@ -40,11 +47,11 @@ def describe_security_group(security_group_id):
             print "Err: security group not found!"
         else:
             print "Unexpected error: %s" % e
-        exit(2)
+        exit(1)
     return response
 
 
-def parse_response(response):
+def parse_response(response, full_desc):
     res = []
     # json output parse
     for sg in response['SecurityGroups']:
@@ -67,7 +74,7 @@ def parse_response(response):
                         if 'Description' in userid_group_pair:
                             description = userid_group_pair['Description']
 
-                if USE_SHORT_DESCRIPTION:
+                if not full_desc:
                     description = description.split(' ')[0]
 
                 res.append([port, protocol, description])
@@ -82,15 +89,13 @@ def output(result):
 
 
 if __name__ == "__main__":
-    # at least one parameter is needed which is the security group id, like sg-12345
-    if len(sys.argv) < 2:
-        print "Please specify security group id."
-        print "Usage:"
-        print "\t{} {}".format(sys.argv[0], 'sg-xxxxx')
-        exit(1)
-    else:
-        security_group_id = sys.argv[1]
-        response = describe_security_group(security_group_id)
-        result = parse_response(response)
-        output(result)
-        exit(0)
+    args = parse_args()
+
+    region = args.region
+    full_desc = args.full_desc
+    sg = args.sg
+
+    response = describe_security_group(sg, region)
+    result = parse_response(response, full_desc)
+    output(result)
+    exit(0)
