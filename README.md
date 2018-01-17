@@ -1,8 +1,8 @@
 # AWS Related Python Scripts
 
-`nagios-conf-ec2`: generate gagios configigurations for all AWS EC2 instances
+`nagios-conf-ec2`: generate gagios configurations for all AWS EC2 instances
 
-`nagios-conf-rds`: generate gagios configigurations for all AWS RDS instances
+`nagios-conf-rds`: generate gagios configurations for all AWS RDS instances
 
 `security-group-desc`: describe a security group, to see each port is used for what reason
 
